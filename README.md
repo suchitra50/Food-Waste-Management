@@ -1,190 +1,88 @@
-import streamlit as st
-import pandas as pd
-import psycopg2
-import plotly.express as px
+## 🚀 Live App
 
-# ---------------- CONFIG ----------------
-st.set_page_config(page_title="Food Wastage System", layout="wide")
+You can try the interactive Streamlit app here:  
+👉 [Food Waste Management Dashboard](https://foodwastemanagementapp.streamlit.app/)
 
-# ---------------- DB CONNECTION ----------------
-def get_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="food_wastage",
-        user="postgres",
-        password="jaanvika123",
-        port=5432
-    )
+## 📌 Project Overview
+This project focuses on analyzing and optimizing food donation and claims using SQL, Python, and Streamlit.  
+It provides insights into food distribution, demand patterns, and provider-receiver trends to help reduce food wastage and improve allocation efficiency.
 
-conn = get_connection()
+---
 
-# ---------------- QUERY FUNCTION ----------------
-def run_query(query):
-    return pd.read_sql(query, conn)
+## ✨ Features
+✅ Streamlit Web App with user-friendly interface  
+✅ Filter food donations by **location, provider, and food type**  
+✅ Contact food providers and receivers directly via app  
+✅ CRUD Operations – Add, Update, Delete donation/claim records (demo-enabled)  
+✅ 15+ SQL-powered analytical queries with visual outputs  
+✅ Insights into food demand, provider contributions, and wastage trends  
+## 📂 Repository Structure
+FoodWasteManagement_Project_Suchitra/
+│
+├── data/ # Cleaned CSVs (query results)
+│ ├── query01_city_provider_receiver_counts_cleaned.csv
+│ ├── query02_To_contributing_provider_type_cleaned.csv
+│ ├── ...
+│ └── query15_peak_claim_month_cleaned.csv
+│
+├── screenshots/ # Dashboard screenshots
+│ ├── query01_city_provider_receiver_counts.png
+│ ├── query02_provider_type.png
+│ ├── ...
+│ └── query15_peak_claim_month.png
+## ⚙️ Installation & Setup
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/<your-username>/FoodWasteManagement_Project_Suchitra.git
+   cd FoodWasteManagement_Project_Suchitra
 
-# ---------------- SIDEBAR ----------------
-st.sidebar.title("🍱 Food Wastage System")
 
-# ---------------- FILTERS ----------------
-st.sidebar.markdown("### 🔍 Filters")
+Create virtual environment & install dependencies
 
-locations = ["All"] + list(run_query("SELECT DISTINCT location FROM food_listings")["location"])
-providers = ["All"] + list(run_query("SELECT DISTINCT provider_id FROM providers")["provider_id"])
-food_types = ["All"] + list(run_query("SELECT DISTINCT food_type FROM food_listings")["food_type"])
+pip install -r requirements.txt
 
-selected_location = st.sidebar.selectbox("📍 Location", locations)
-selected_provider = st.sidebar.selectbox("🏪 Provider ID", providers)
-selected_food = st.sidebar.selectbox("🍱 Food Type", food_types)
 
-# ---------------- NAVIGATION ----------------
-menu = st.sidebar.radio("Navigate", [
-    "🏠 Overview",
-    "📊 EDA Analysis",
-    "📍 Filters",
-    "🛠️ CRUD",
-    "ℹ️ About"
-])
+Run the Streamlit app
 
-# ---------------- OVERVIEW QUERY ----------------
-OVERVIEW_QUERY = """
-SELECT 
-    f.location,
-    COUNT(DISTINCT f.provider_id) AS providers,
-    COUNT(DISTINCT c.receiver_id) AS receivers
-FROM food_listings f
-LEFT JOIN claims c ON f.food_id = c.food_id
-GROUP BY f.location
-ORDER BY providers DESC;
-"""
+streamlit run FoodWasteApp.py
+│
+├── FoodWasteApp.py # Streamlit application code
+├── requirements.txt # Python dependencies
+├── README.md # Project documentation
+└── Project_Report.pdf # Final project report with insights
+📊 Key Insights
 
-# =========================
-# 🏠 OVERVIEW
-# =========================
-if menu == "🏠 Overview":
+Top contributing provider types: Restaurants lead donations.
 
-    st.title("📊 Overview Dashboard")
+Highest demand cities: South Kathryn, Adambury show high claim rates.
 
-    col1, col2, col3 = st.columns(3)
+Most claimed food items: Rice and Soup dominate claims.
 
-    total_food = run_query("SELECT COALESCE(SUM(quantity),0) FROM food_listings;").iloc[0, 0]
-    total_providers = run_query("SELECT COUNT(*) FROM providers;").iloc[0, 0]
-    total_receivers = run_query("SELECT COUNT(*) FROM receivers;").iloc[0, 0]
+Most claimed meal type: Breakfast is the top claimed category.
 
-    col1.metric("🍱 Total Food", total_food)
-    col2.metric("🏪 Providers", total_providers)
-    col3.metric("👥 Receivers", total_receivers)
+Peak Claim Month: March 2025 had the highest claims (~1000).
 
-    st.markdown("---")
+📸 Screenshots
 
-    df = run_query(OVERVIEW_QUERY)
+The project includes 20+ screenshots of dashboards and query outputs.
+Query	Screenshot
+City Provider/Receiver Counts	query01_city_provider_receiver_counts.png
+Top Contributing Provider Type	query02_provider_type.png
+All Provider Contacts	query03_provider_contacts.png
+Receivers with Most Claims	query04_receivers_claims.png
+Total Food Quantity	query05_total_quantity.png
+City with Highest Listings	query06_city_highest_listings.png
+Most Common Food Types	query07_food_types.png
+Food Claims by Item	query08_food_claims.png
+Provider with Most Successful Claims	query09_successful_claims.png
+Claim Status Percentages	query10_claim_status.png
+Avg Claim Quantity	query11_avg_claim.png
+Most Claimed Meal Type	query12_meal_type.png
+Quantity Donated per Provider	query13_quantity_donated.png
+Most Demanded Food Type per City	query14_demanded_food.png
+Peak Claim Month	query15_peak_month.png
 
-    fig = px.bar(df, x="location", y=["providers", "receivers"], barmode="group")
-    st.plotly_chart(fig, use_container_width=True)
 
-# =========================
-# 📊 EDA ANALYSIS
-# =========================
-elif menu == "📊 EDA Analysis":
+---
 
-    st.title("📊 SQL EDA")
-
-    queries = {
-        "Total Food": "SELECT SUM(quantity) AS total_food FROM food_listings;",
-        "Location Wise Food": "SELECT location, COUNT(*) AS total FROM food_listings GROUP BY location;",
-        "Meal Type": "SELECT meal_type, COUNT(*) AS total FROM food_listings GROUP BY meal_type;",
-        "Claim Status": "SELECT status, COUNT(*) AS total FROM claims GROUP BY status;"
-    }
-
-    selected = st.selectbox("Choose Analysis", list(queries.keys()))
-
-    df = run_query(queries[selected])
-    st.dataframe(df)
-
-    if df.shape[1] == 2:
-        fig = px.bar(df, x=df.columns[0], y=df.columns[1])
-        st.plotly_chart(fig, use_container_width=True)
-
-# =========================
-# 📍 FILTERS PAGE
-# =========================
-elif menu == "📍 Filters":
-
-    st.title("🔎 Filtered Data")
-
-    query = f"""
-        SELECT * FROM food_listings
-        WHERE location = '{selected_location}'
-    """
-
-    df = run_query(query)
-    st.dataframe(df)
-
-# =========================
-# 🛠️ CRUD OPERATIONS
-# =========================
-elif menu == "🛠️ CRUD":
-
-    st.title("🛠️ CRUD Operations")
-
-    table = st.selectbox("Table", ["food_listings", "providers", "receivers", "claims"])
-    action = st.radio("Action", ["Read", "Create", "Delete"])
-
-    if action == "Read":
-        df = run_query(f"SELECT * FROM {table} LIMIT 100;")
-        st.dataframe(df)
-
-    elif action == "Create" and table == "food_listings":
-
-        provider_id = st.number_input("Provider ID")
-        food_name = st.text_input("Food Name")
-        quantity = st.number_input("Quantity")
-        location = st.text_input("Location")
-
-        if st.button("Insert"):
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO food_listings(provider_id, food_name, quantity, location)
-                VALUES (%s, %s, %s, %s)
-            """, (provider_id, food_name, quantity, location))
-            conn.commit()
-            st.success("Inserted Successfully ✔")
-
-    elif action == "Delete" and table == "food_listings":
-
-        food_id = st.number_input("Food ID")
-
-        if st.button("Delete"):
-            cur = conn.cursor()
-            cur.execute("DELETE FROM food_listings WHERE food_id=%s", (food_id,))
-            conn.commit()
-            st.warning("Deleted Successfully ✔")
-
-# =========================
-# ℹ️ ABOUT
-# =========================
-elif menu == "ℹ️ About":
-
-    st.title("ℹ️ About Project")
-
-    st.markdown("""
-    ## 🍱 Food Wastage Management System
-
-    ### 🚀 Features
-    - SQL-based analytics
-    - Provider & receiver tracking
-    - Location insights
-    - Interactive dashboard
-
-    ### 🏗️ Tech Stack
-    - Streamlit
-    - PostgreSQL
-    - Pandas
-    - Plotly
-
-    ### 🎯 Goal
-    Reduce food wastage using data analytics
-    """)
-
-# ---------------- FOOTER ----------------
-st.markdown("---")
-st.caption("🚀 Final Production Ready Dashboard")
+        
